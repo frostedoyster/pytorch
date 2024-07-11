@@ -36,7 +36,6 @@ from torch.testing._internal.common_device_type import (
     OpDTypes,
     ops,
     skipMeta,
-    expectedFailureCPU,
 )
 from torch.testing._internal.common_dtype import (
     all_types_and_complex_and,
@@ -273,8 +272,7 @@ class TestCommon(TestCase):
             and op.formatted_name
             in ("signal_windows_exponential", "signal_windows_bartlett")
             and dtype == torch.float64
-            and "cuda" in device
-            or "cpu" in device
+            and device in ["cuda", "cpu"]
         ):  # noqa: E121
             raise unittest.SkipTest("XXX: raises tensor-likes are not close.")
 

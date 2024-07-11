@@ -518,6 +518,7 @@ test_single_dynamo_benchmark() {
   shift
 
   local partition_flags=()
+  local ACCURACY_CONFIG=${TEST_CONFIG}
   if [[ -n "$NUM_TEST_SHARDS" && -n "$shard_id" ]]; then
     partition_flags=( --total-partitions "$NUM_TEST_SHARDS" --partition-id "$shard_id" )
   fi
@@ -537,6 +538,10 @@ test_single_dynamo_benchmark() {
       # For CPU device, we perfer non ABI-compatible mode on CI when testing AOTInductor.
       export TORCHINDUCTOR_ABI_COMPATIBLE=1
     fi
+    
+    if [[ "${TEST_CONFIG}" == *_avx2* ]]; then
+      ACCURACY_CONFIG=${TEST_CONFIG::-5}
+    fi
     python "benchmarks/dynamo/$suite.py" \
       --ci --accuracy --timing --explain \
       "${DYNAMO_BENCHMARK_FLAGS[@]}" \
@@ -544,10 +549,10 @@ test_single_dynamo_benchmark() {
       --output "$TEST_REPORTS_DIR/${name}_${suite}.csv"
     python benchmarks/dynamo/check_accuracy.py \
       --actual "$TEST_REPORTS_DIR/${name}_$suite.csv" \
-      --expected "benchmarks/dynamo/ci_expected_accuracy/${TEST_CONFIG}_${name}.csv"
+      --expected "benchmarks/dynamo/ci_expected_accuracy/${ACCURACY_CONFIG}_${name}.csv"
     python benchmarks/dynamo/check_graph_breaks.py \
       --actual "$TEST_REPORTS_DIR/${name}_$suite.csv" \
-      --expected "benchmarks/dynamo/ci_expected_accuracy/${TEST_CONFIG}_${name}.csv"
+      --expected "benchmarks/dynamo/ci_expected_accuracy/${ACCURACY_CONFIG}_${name}.csv"
   fi
 }
 
@@ -1306,7 +1311,7 @@ elif [[ "${TEST_CONFIG}" == *inductor* ]]; then
   install_torchvision
   test_inductor_shard "${SHARD_NUMBER}"
   if [[ "${SHARD_NUMBER}" == 1 ]]; then
-    if [[ "${BUILD_ENVIRONMENT}" != *jammy* ]]; then
+    if [[ "${BUILD_ENVIRONMENT}" != linux-jammy-py3.8-gcc11-build ]]; then
       # Temporarily skip test_inductor_aoti due to https://github.com/pytorch/pytorch/issues/130311
       test_inductor_aoti
       test_inductor_distributed
